@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Halima Dairy - Herd Tracker</title>
+    <style>
+        :root {
+            --bg: #f1f5f9; --card: #ffffff; --text: #0f172a; --primary: #0f172a;
+            --orange: #f97316; --yellow: #eab308; --red: #ef4444; --gray: #64748b;
+        }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 12px; }
+        h1, h2 { text-align: center; margin: 5px 0; color: var(--primary); }
+        h2 { font-size: 14px; font-weight: 500; color: var(--gray); }
+        .dashboard { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 15px 0; }
+        .card { background: var(--card); padding: 12px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.04); border-left: 5px solid var(--gray); }
+        .card h3 { margin: 0; font-size: 11px; text-transform: uppercase; color: var(--gray); }
+        .card p { margin: 4px 0 0 0; font-size: 20px; font-weight: 700; }
+        form { background: var(--card); padding: 15px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.04); margin-bottom: 15px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .group { display: flex; flex-direction: column; margin-bottom: 8px; }
+        .full { grid-column: span 2; }
+        label { font-size: 11px; font-weight: 600; margin-bottom: 3px; color: var(--gray); }
+        input, select { padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; background: #fff; }
+        button { background: var(--primary); color: white; border: none; padding: 12px; width: 100%; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; }
+        .table-container { overflow-x: auto; background: var(--card); border-radius: 12px; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th, td { padding: 10px; border-bottom: 1px solid #f1f5f9; white-space: nowrap; }
+        th { background: #f8fafc; font-weight: 600; }
+        .not-serviced-100 { background-color: #ffedd5 !important; color: #c2410c; font-weight: 600; } 
+        .test-due-60 { background-color: #fef9c3 !important; color: #a16207; font-weight: 600; } 
+        .gestation-7 { background-color: #fee2e2 !important; color: #b91c1c; font-weight: 600; }
+        .btn-delete { background: var(--red); color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>🐃 Halima Dairy Farm</h1>
+    <h2>Herd Management Dashboard</h2>
+    <div class="dashboard">
+        <div class="card" style="border-left-color:var(--primary)"><h3>Active Herd</h3><p id="t-count">0</p></div>
+        <div class="card" style="border-left-color:var(--red)"><h3>Total KHALI</h3><p id="k-count">0</p></div>
+        <div class="card" style="border-left-color:#3b82f6"><h3>Shed A (98)</h3><p id="sa-count">0</p></div>
+        <div class="card" style="border-left-color:#a855f7"><h3>Shed B (98)</h3><p id="sb-count">0</p></div>
+        <div class="card"><h3>Yard (25)</h3><p id="y-count">0</p></div>
+        <div class="card"><h3>Gujarat</h3><p id="g-count">0</p></div>
+    </div>
+    <form id="h-form">
+        <div class="grid">
+            <div class="group"><label>Buffalo Tag No</label><input type="text" id="tag" required></div>
+            <div class="group"><label>Location</label><select id="loc" required><option value="Shed A">Shed A</option><option value="Shed B">Shed B</option><option value="Yard">Yard</option><option value="Gujarat">Gujarat</option><option value="Slaughter">Slaughter</option><option value="Died">Died</option></select></div>
+            <div class="group"><label>Khila No</label><input type="number" id="khila" min="1" max="98"></div>
+            <div class="group"><label>Incoming Date</label><input type="date" id="in-date" required></div>
+            <div class="group"><label>Fali Date</label><input type="date" id="fali-date"></div>
+            <div class="group"><label>Bull Name/No</label><input type="text" id="bull"></div>
+            <div class="group full"><label>Status</label><select id="status"><option value="">Pending</option><option value="P">P (Pregnant)</option><option value="KHALI">KHALI</option><option value="Abortion">Abortion</option></select></div>
+        </div>
+        <button type="submit">Save Animal Entry</button>
+    </form>
+    <div class="table-container">
+        <table>
+            <thead><tr><th>Tag</th><th>Location</th><th>Incoming</th><th>Fali</th><th>Status</th><th>Action</th></tr></thead>
+            <tbody id="t-body"></tbody>
+        </table>
+    </div>
+    <script>
+        let data = JSON.parse(localStorage.getItem('hHerdData')) || [];
+        document.getElementById('h-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const tag = document.getElementById('tag').value.trim();
+            const loc = document.getElementById('loc').value;
+            if(document.getElementById('fali-date').value) {
+                data.forEach(r => { if(r.tag === tag && r.active) r.status = "R"; });
+            }
+            data.push({
+                tag: tag, loc: loc, khila: document.getElementById('khila').value || '—',
+                inDate: document.getElementById('in-date').value, faliDate: document.getElementById('fali-date').value,
+                bull: document.getElementById('bull').value || '—', status: document.getElementById('status').value,
+                active: !(loc === 'Slaughter' || loc === 'Died')
+            });
+            localStorage.setItem('hHerdData', JSON.stringify(data));
+            this.reset(); document.getElementById('in-date').valueAsDate = new Date(); render();
+        });
+        function del(idx) { if(confirm("Delete animal?")) { data.splice(data.length-1-idx, 1); localStorage.setItem('hHerdData', JSON.stringify(data)); render(); } }
+        function render() {
+            const body = document.getElementById('t-body'); body.innerHTML = '';
+            let k=0, a=0, b=0, y=0, g=0, tot=0; const today = new Date();
+            data.forEach(r => {
+                if(!r.active) return; tot++;
+                if(r.status==='KHALI') k++; if(r.loc==='Shed A') a++; if(r.loc==='Shed B') b++; if(r.loc==='Yard') y++; if(r.loc==='Gujarat') g++;
+            });
+            data.slice().reverse().forEach((r, idx) => {
+                const tr = document.createElement('tr');
+                const diffIn = Math.ceil(Math.abs(today - new Date(r.inDate)) / (1000*60*60*24));
+                const diffFali = r.faliDate ? Math.ceil(Math.abs(today - new Date(r.faliDate)) / (1000*60*60*24)) : 0;
+                if(r.active) {
+                    if(r.status==='P' && diffIn > 210) tr.className = 'gestation-7';
+                    else if(r.faliDate && diffFali >= 60 && r.status==='') tr.className = 'test-due-60';
+                    else if(!r.faliDate && diffIn > 100 && r.loc!=='Gujarat') tr.className = 'not-serviced-100';
+                }
+                tr.innerHTML = `<td><strong>${r.tag}</strong></td><td>${r.loc} (${r.khila})</td><td>${r.inDate}</td><td>${r.faliDate||'—'}</td><td><strong>${r.status||'Pending'}</strong></td><td><button class="btn-delete" onclick="del(${idx})">X</button></td>`;
+                body.appendChild(tr);
+            });
+            document.getElementById('t-count').innerText = tot; document.getElementById('k-count').innerText = k;
+            document.getElementById('sa-count').innerText = a; document.getElementById('sb-count').innerText = b;
+            document.getElementById('y-count').innerText = y; document.getElementById('g-count').innerText = g;
+        }
+        document.getElementById('in-date').valueAsDate = new Date(); render();
+    </script>
+</body>
+</html>
